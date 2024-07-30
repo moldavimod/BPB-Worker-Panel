@@ -1,8 +1,3 @@
-// @ts-nocheck
-// <!--GAMFC-->version base on commit 43fad05dcdae3b723c53c226f8181fc5bd47223e, time is 2023-06-22 15:20:02 UTC<!--GAMFC-END-->.
-// @ts-ignore
-// https://github.com/bia-pain-bache/BPB-Worker-Panel
-
 import { connect } from 'cloudflare:sockets';
 
 // How to generate your own UUID:
@@ -11,7 +6,7 @@ let userID = '89b3cbba-e6ac-485a-9481-976a0415eab9';
 
 // https://www.nslookup.io/domains/cdn.xn--b6gac.eu.org/dns-records/
 // https://www.nslookup.io/domains/cdn-all.xn--b6gac.eu.org/dns-records/
-const proxyIPs= ['us1.playstationplusmika.shop', 'us2.playstationplusmika.shop', 'us3.playstationplusmika.shop'];
+const proxyIPs= ['ProxyIP.US.fxxk.dedyn.io', 'ProxyIP.Oracle.fxxk.dedyn.io'];
 
 const defaultHttpPorts = ['80', '8080', '2052', '2082', '2086', '2095', '8880'];
 const defaultHttpsPorts = ['443', '8443', '2053', '2083', '2087', '2096'];
