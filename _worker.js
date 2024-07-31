@@ -1371,8 +1371,7 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
     const portRegex = /[^:]*$/;
     const wgConfigs = [await fetchWgConfig(), await fetchWgConfig()]; 
 
-    wowEndpoint.split(',').forEach( (endpoint, index) => {
-        
+    wowEndpoint.split(',').forEach((endpoint, index) => {
         for (let i = 0; i < 2; i++) {
             let xrayOutbound = structuredClone(xrayWgOutboundTemp);
             let singboxOutbound = structuredClone(singboxWgOutboundTemp);
@@ -1380,46 +1379,58 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
                 `${wgConfigs[i].account.config.interface.addresses.v4}/32`,
                 `${wgConfigs[i].account.config.interface.addresses.v6}/128`
             ];
-    
+
             xrayOutbound.settings.peers[0].endpoint = endpoint;
             xrayOutbound.settings.peers[0].publicKey = wgConfigs[i].account.config.peers[0].public_key;
             xrayOutbound.settings.reserved = base64ToDecimal(wgConfigs[i].account.config.client_id);
             xrayOutbound.settings.secretKey = wgConfigs[i].privateKey;
             xrayOutbound.tag = i === 1 ? `warp-ir_${index + 1}` : `warp-out_${index + 1}`;    
-            
+
+            // Ensure all traffic goes through the proxy
+            xrayOutbound.settings.streamSettings = {
+                network: "tcp",
+                security: "tls",
+                tlsSettings: {
+                    allowInsecure: false
+                },
+                tcpSettings: {
+                    acceptProxyProtocol: true
+                }
+            };
+
             if (i === 1) {
                 delete xrayOutbound.streamSettings;
             } else {
                 xrayOutbound.streamSettings.sockopt.dialerProxy = `warp-ir_${index + 1}`;
             }
-    
+
             xrayOutbounds.push(xrayOutbound);
-    
+
             singboxOutbound.local_address = [
                 `${wgConfigs[i].account.config.interface.addresses.v4}/32`,
                 `${wgConfigs[i].account.config.interface.addresses.v6}/128`
             ];
-    
+
             singboxOutbound.server = endpoint.includes('[') ? endpoint.match(ipv6Regex)[1] : endpoint.split(':')[0];
             singboxOutbound.server_port = endpoint.includes('[') ? +endpoint.match(portRegex)[0] : +endpoint.split(':')[1];    
             singboxOutbound.peer_public_key = wgConfigs[i].account.config.peers[0].public_key;
             singboxOutbound.reserved = wgConfigs[i].account.config.client_id;
             singboxOutbound.private_key = wgConfigs[i].privateKey;
             singboxOutbound.tag = i === 1 ? `warp-ir_${index + 1}` : `💦 WoW ${index + 1} 🌍`;    
-            
+
             if (i === 0) {
                 singboxOutbound.detour = `warp-ir_${index + 1}`;
             } else {
                 delete singboxOutbound.detour;
             }
-    
+
             singboxOutbounds.push(singboxOutbound);
         }
-
     })
 
     return {xray: xrayOutbounds, singbox: singboxOutbounds};
 }
+
 
 const fetchWgConfig = async () => {
     const wgResponse = await fetch('https://fscarmen.cloudflare.now.cc/wg');
@@ -1455,13 +1466,14 @@ const buildDNSObject = async (remoteDNS, localDNS, blockAds, bypassIran, blockPo
     let dnsObject = {
         hosts: {},
         servers: [
-          isWorkerLess ? "https://cloudflare-dns.com/dns-query" : remoteDNS,
-          {
-            address: localDNS,
-            domains: ["geosite:category-ir", "domain:.ir"],
-            expectIPs: ["geoip:ir"],
-            port: 53,
-          },
+            // Always use remoteDNS as proxy
+            remoteDNS,
+            {
+                address: localDNS,
+                domains: ["geosite:category-ir", "domain:.ir"],
+                expectIPs: ["geoip:ir"],
+                port: 53,
+            },
         ],
         tag: "dns",
     };
@@ -1497,6 +1509,7 @@ const buildDNSObject = async (remoteDNS, localDNS, blockAds, bypassIran, blockPo
     return dnsObject;
 }
 
+
 const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN, isChain, isBalancer, isWorkerLess) => {
     let rules = [
         {
@@ -1505,10 +1518,10 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             type: "field"
         },
         {
-          ip: [localDNS],
-          outboundTag: "direct",
-          port: "53",
-          type: "field",
+            ip: [localDNS],
+            outboundTag: "direct",
+            port: "53",
+            type: "field",
         }
     ];
 
@@ -1564,6 +1577,7 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
 
     return rules;
 }
+
 
 const extractWgKeys = (textData) => {
     const lines = textData.trim().split("\n");
