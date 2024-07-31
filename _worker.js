@@ -963,7 +963,7 @@ const buildWorkerLessConfig = async (env, client) => {
     fakeOutbound.tag = 'fake-outbound';
 
     let fragConfig = structuredClone(xrayConfigTemp);
-    fragConfig.remarks  = '💦 BPB Frag - WorkerLess ⭐'
+    fragConfig.remarks  = '💦 BPB Frag - WorkerLess ⭐️'
     fragConfig.dns = await buildDNSObject(remoteDNS, localDNS, blockAds, bypassIran, blockPorn, true);
     fragConfig.outbounds[0].settings.domainStrategy = 'UseIP';
     fragConfig.outbounds[0].settings.fragment.length = `${lengthMin}-${lengthMax}`;
@@ -1371,7 +1371,8 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
     const portRegex = /[^:]*$/;
     const wgConfigs = [await fetchWgConfig(), await fetchWgConfig()]; 
 
-    wowEndpoint.split(',').forEach((endpoint, index) => {
+    wowEndpoint.split(',').forEach( (endpoint, index) => {
+        
         for (let i = 0; i < 2; i++) {
             let xrayOutbound = structuredClone(xrayWgOutboundTemp);
             let singboxOutbound = structuredClone(singboxWgOutboundTemp);
@@ -1379,58 +1380,46 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
                 `${wgConfigs[i].account.config.interface.addresses.v4}/32`,
                 `${wgConfigs[i].account.config.interface.addresses.v6}/128`
             ];
-
+    
             xrayOutbound.settings.peers[0].endpoint = endpoint;
             xrayOutbound.settings.peers[0].publicKey = wgConfigs[i].account.config.peers[0].public_key;
             xrayOutbound.settings.reserved = base64ToDecimal(wgConfigs[i].account.config.client_id);
             xrayOutbound.settings.secretKey = wgConfigs[i].privateKey;
             xrayOutbound.tag = i === 1 ? `warp-ir_${index + 1}` : `warp-out_${index + 1}`;    
-
-            // Ensure all traffic goes through the proxy
-            xrayOutbound.settings.streamSettings = {
-                network: "tcp",
-                security: "tls",
-                tlsSettings: {
-                    allowInsecure: false
-                },
-                tcpSettings: {
-                    acceptProxyProtocol: true
-                }
-            };
-
+            
             if (i === 1) {
                 delete xrayOutbound.streamSettings;
             } else {
                 xrayOutbound.streamSettings.sockopt.dialerProxy = `warp-ir_${index + 1}`;
             }
-
+    
             xrayOutbounds.push(xrayOutbound);
-
+    
             singboxOutbound.local_address = [
                 `${wgConfigs[i].account.config.interface.addresses.v4}/32`,
                 `${wgConfigs[i].account.config.interface.addresses.v6}/128`
             ];
-
+    
             singboxOutbound.server = endpoint.includes('[') ? endpoint.match(ipv6Regex)[1] : endpoint.split(':')[0];
             singboxOutbound.server_port = endpoint.includes('[') ? +endpoint.match(portRegex)[0] : +endpoint.split(':')[1];    
             singboxOutbound.peer_public_key = wgConfigs[i].account.config.peers[0].public_key;
             singboxOutbound.reserved = wgConfigs[i].account.config.client_id;
             singboxOutbound.private_key = wgConfigs[i].privateKey;
             singboxOutbound.tag = i === 1 ? `warp-ir_${index + 1}` : `💦 WoW ${index + 1} 🌍`;    
-
+            
             if (i === 0) {
                 singboxOutbound.detour = `warp-ir_${index + 1}`;
             } else {
                 delete singboxOutbound.detour;
             }
-
+    
             singboxOutbounds.push(singboxOutbound);
         }
+
     })
 
     return {xray: xrayOutbounds, singbox: singboxOutbounds};
 }
-
 
 const fetchWgConfig = async () => {
     const wgResponse = await fetch('https://fscarmen.cloudflare.now.cc/wg');
@@ -1463,52 +1452,7 @@ const fetchWgConfig = async () => {
 }
 
 const buildDNSObject = async (remoteDNS, localDNS, blockAds, bypassIran, blockPorn, isWorkerLess) => {
-    let dnsObject = {
-        hosts: {},
-        servers: [
-            // Always use remoteDNS as proxy
-            remoteDNS,
-            {
-                address: localDNS,
-                domains: ["geosite:category-ir", "domain:.ir"],
-                expectIPs: ["geoip:ir"],
-                port: 53,
-            },
-        ],
-        tag: "dns",
-    };
-
-    if (isWorkerLess) {
-        const resolvedDOH = await resolveDNS('cloudflare-dns.com');
-        const resolvedCloudflare = await resolveDNS('cloudflare.com');
-        const resolvedCLDomain = await resolveDNS('www.speedtest.net.cdn.cloudflare.net');
-        const resolvedCFNS_1 = await resolveDNS('ben.ns.cloudflare.com');
-        const resolvedCFNS_2 = await resolveDNS('lara.ns.cloudflare.com');
-        dnsObject.hosts['cloudflare-dns.com'] = [
-            ...resolvedDOH.ipv4, 
-            ...resolvedCloudflare.ipv4, 
-            ...resolvedCLDomain.ipv4,
-            ...resolvedCFNS_1.ipv4,
-            ...resolvedCFNS_2.ipv4
-        ];
-    }
-
-    if (blockAds) {
-        dnsObject.hosts["geosite:category-ads-all"] = ["127.0.0.1"];
-        dnsObject.hosts["geosite:category-ads-ir"] = ["127.0.0.1"];
-    }
-
-    if (blockPorn) {
-        dnsObject.hosts["geosite:category-porn"] = ["127.0.0.1"];
-    }
-
-    if (!bypassIran || localDNS === 'localhost' || isWorkerLess) {
-        dnsObject.servers.pop();
-    }
-
-    return dnsObject;
 }
-
 
 const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN, isChain, isBalancer, isWorkerLess) => {
     let rules = [
@@ -1518,10 +1462,10 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             type: "field"
         },
         {
-            ip: [localDNS],
-            outboundTag: "direct",
-            port: "53",
-            type: "field",
+          ip: [localDNS],
+          outboundTag: "direct",
+          port: "53",
+          type: "field",
         }
     ];
 
@@ -1577,7 +1521,6 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
 
     return rules;
 }
-
 
 const extractWgKeys = (textData) => {
     const lines = textData.trim().split("\n");
@@ -1774,7 +1717,7 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
                     ${config.address === 'Best-Ping' 
                         ? `<div  style="justify-content: center;"><span><b>💦 Best-Ping 💥</b></span></div>` 
                         : config.address === 'WorkerLess'
-                            ? `<div  style="justify-content: center;"><span><b>💦 WorkerLess ⭐</b></span></div>`
+                            ? `<div  style="justify-content: center;"><span><b>💦 WorkerLess ⭐️</b></span></div>`
                             : config.address === 'Best-Fragment'
                                 ? `<div  style="justify-content: center;"><span><b>💦 Best-Fragment 😎</b></span></div>`
                                 : config.address
@@ -2042,7 +1985,7 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
 					<input type="url" id="remoteDNS" name="remoteDNS" value="${remoteDNS}" required>
 				</div>
 				<div class="form-control">
-					<label for="localDNS">🏚️ Local DNS</label>
+					<label for="localDNS">🏚 Local DNS</label>
 					<input type="text" id="localDNS" name="localDNS" value="${localDNS}"
 						pattern="^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)|localhost$"
 						title="Please enter a valid DNS IP Address or localhost!"  required>
@@ -2228,7 +2171,7 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
                     </tr>
 				</table>
 			</div>
-			<h2>FRAGMENT SUB ⛓️</h2>
+			<h2>FRAGMENT SUB ⛓</h2>
 			<div class="table-container">
                 <table id="frag-sub-table">
                     <tr>
@@ -2322,7 +2265,7 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
 					</tr>
 				</table>
 			</div>
-            <h2>FRAGMENT - NEKORAY ⛓️</h2>
+            <h2>FRAGMENT - NEKORAY ⛓</h2>
             <div class="table-container">
 				<table id="custom-configs-table">
 					<tr style="text-wrap: nowrap;">
@@ -2452,7 +2395,7 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
             if (activePortsNo === 0) {
                 event.preventDefault();
                 event.target.checked = !event.target.checked;
-                alert("⛔ At least one port should be selected! 🫤");
+                alert("⛔️ At least one port should be selected! 🫤");
                 activePortsNo = 1;
                 defaultHttpsPorts.includes(event.target.name) && activeHttpsPortsNo++;
                 return false;
@@ -2461,7 +2404,7 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
             if (activeHttpsPortsNo === 0) {
                 event.preventDefault();
                 event.target.checked = !event.target.checked;
-                alert("⛔ At least one TLS(https) port should be selected! 🫤");
+                alert("⛔️ At least one TLS(https) port should be selected! 🫤");
                 activeHttpsPortsNo = 1;
                 return false;
             }
@@ -2537,29 +2480,29 @@ const renderHomePage = async (env, hostName, fragConfigs) => {
             });
     
             if (invalidIPs.length) {
-                alert('⛔ Invalid IPs or Domains 🫤\\n\\n' + invalidIPs.map(ip => '⚠️ ' + ip).join('\\n'));
+                alert('⛔️ Invalid IPs or Domains 🫤\\n\\n' + invalidIPs.map(ip => '⚠️ ' + ip).join('\\n'));
                 return false;
             }
             
             if (invalidEndpoints.length) {
-                alert('⛔ Invalid endpoint 🫤\\n\\n' + invalidEndpoints.map(endpoint => '⚠️ ' + endpoint).join('\\n'));
+                alert('⛔️ Invalid endpoint 🫤\\n\\n' + invalidEndpoints.map(endpoint => '⚠️ ' + endpoint).join('\\n'));
                 return false;
             }
 
             if (lengthMin >= lengthMax || intervalMin > intervalMax) {
-                alert('⛔ Minimum should be smaller or equal to Maximum! 🫤');               
+                alert('⛔️ Minimum should be smaller or equal to Maximum! 🫤');               
                 return false;
             }
 
             if (!(isVless && (hasSecurity && validSecurityType || !hasSecurity) && validTransmission) && chainProxy) {
-                alert('⛔ Invalid Config! 🫤 \\n - The chain proxy should be VLESS!\\n - Transmission should be GRPC,WS or TCP\\n - Security should be TLS,Reality or None');               
+                alert('⛔️ Invalid Config! 🫤 \\n - The chain proxy should be VLESS!\\n - Transmission should be GRPC,WS or TCP\\n - Security should be TLS,Reality or None');               
                 return false;
             }
 
             try {
                 document.body.style.cursor = 'wait';
                 const applyButtonVal = applyButton.value;
-                applyButton.value = '⌛ Loading...';
+                applyButton.value = '⌛️ Loading...';
 
                 const response = await fetch('/panel', {
                     method: 'POST',
