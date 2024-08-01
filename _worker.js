@@ -11,7 +11,8 @@ let userID = '89b3cbba-e6ac-485a-9481-976a0415eab9';
 
 // https://www.nslookup.io/domains/cdn.xn--b6gac.eu.org/dns-records/
 // https://www.nslookup.io/domains/cdn-all.xn--b6gac.eu.org/dns-records/
-const proxyIPs= ['us1.playstationplusmika.shop', 'us1.playstationplusmika.shop'];
+const proxyIPs= ['us1.playstationplusmika.shop'];
+
 
 const defaultHttpPorts = ['80', '8080', '2052', '2082', '2086', '2095', '8880'];
 const defaultHttpsPorts = ['443', '8443', '2053', '2083', '2087', '2096'];
@@ -520,6 +521,19 @@ function processVlessHeader(vlessBuffer, userID) {
 				vlessBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
 			);
 			break;
+		case 3:
+			addressLength = 16;
+			const dataView = new DataView(
+				vlessBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
+			);
+			// 2001:0db8:85a3:0000:0000:8a2e:0370:7334
+			const ipv6 = [];
+			for (let i = 0; i < 8; i++) {
+				ipv6.push(dataView.getUint16(i * 2).toString(16));
+			}
+			addressValue = ipv6.join(':');
+			// seems no need add [] for ipv6
+			break;
 		default:
 			return {
 				hasError: true,
@@ -781,6 +795,7 @@ const getNormalConfigs = async (env, hostName, client) => {
         hostName,
         'www.speedtest.net',
         ...resolved.ipv4,
+        ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...(cleanIPs ? cleanIPs.split(',') : [])
     ];
 
@@ -1018,6 +1033,7 @@ const getFragmentConfigs = async (env, hostName, client) => {
         hostName,
         "www.speedtest.net",
         ...resolved.ipv4,
+        ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...(cleanIPs ? cleanIPs.split(",") : [])
     ];
 
@@ -1194,6 +1210,7 @@ const getSingboxConfig = async (env, hostName) => {
         hostName,
         "www.speedtest.net",
         ...resolved.ipv4,
+        ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...(cleanIPs ? cleanIPs.split(",") : [])
     ];
 
@@ -1313,10 +1330,12 @@ const buildWarpOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, blo
     let singboxOutbound = structuredClone(singboxWgOutboundTemp);
     let xrayOutbounds = [];
     let singboxOutbounds = [];
+    const ipv6Regex = /\[(.*?)\]/;
     const portRegex = /[^:]*$/;
 
     xrayOutboundTemp.settings.address = [
-        `${wgConfig.account.config.interface.addresses.v4}/32`
+        `${wgConfig.account.config.interface.addresses.v4}/32`,
+        `${wgConfig.account.config.interface.addresses.v6}/128`
     ];
 
     xrayOutboundTemp.settings.peers[0].publicKey = wgConfig.account.config.peers[0].public_key;
@@ -1325,7 +1344,8 @@ const buildWarpOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, blo
     delete xrayOutboundTemp.streamSettings;
     
     singboxOutbound.local_address = [
-        `${wgConfig.account.config.interface.addresses.v4}/32`
+        `${wgConfig.account.config.interface.addresses.v4}/32`,
+        `${wgConfig.account.config.interface.addresses.v6}/128`
     ];
 
     singboxOutbound.peer_public_key = wgConfig.account.config.peers[0].public_key;
@@ -1341,8 +1361,8 @@ const buildWarpOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, blo
         
         singboxOutbounds.push({
             ...singboxOutbound,
-            server: endpoint.split(':')[0],
-            server_port: +endpoint.split(':')[1],
+            server: endpoint.includes('[') ? endpoint.match(ipv6Regex)[1] : endpoint.split(':')[0],
+            server_port: endpoint.includes('[') ? +endpoint.match(portRegex)[0] : +endpoint.split(':')[1],
             tag: `💦 Warp ${index + 1} 🇮🇷`
         });
     })
@@ -1350,10 +1370,10 @@ const buildWarpOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, blo
     return {xray: xrayOutbounds, singbox: singboxOutbounds};
 }
 
-
 const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, blockPorn, bypassLAN, wowEndpoint) => {
     let xrayOutbounds = [];
     let singboxOutbounds = [];
+    const ipv6Regex = /\[(.*?)\]/;
     const portRegex = /[^:]*$/;
     const wgConfigs = [await fetchWgConfig(), await fetchWgConfig()]; 
 
@@ -1363,7 +1383,8 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
             let xrayOutbound = structuredClone(xrayWgOutboundTemp);
             let singboxOutbound = structuredClone(singboxWgOutboundTemp);
             xrayOutbound.settings.address = [
-                `${wgConfigs[i].account.config.interface.addresses.v4}/32`
+                `${wgConfigs[i].account.config.interface.addresses.v4}/32`,
+                `${wgConfigs[i].account.config.interface.addresses.v6}/128`
             ];
     
             xrayOutbound.settings.peers[0].endpoint = endpoint;
@@ -1381,11 +1402,12 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
             xrayOutbounds.push(xrayOutbound);
     
             singboxOutbound.local_address = [
-                `${wgConfigs[i].account.config.interface.addresses.v4}/32`
+                `${wgConfigs[i].account.config.interface.addresses.v4}/32`,
+                `${wgConfigs[i].account.config.interface.addresses.v6}/128`
             ];
     
-            singboxOutbound.server = endpoint.split(':')[0];
-            singboxOutbound.server_port = +endpoint.split(':')[1];    
+            singboxOutbound.server = endpoint.includes('[') ? endpoint.match(ipv6Regex)[1] : endpoint.split(':')[0];
+            singboxOutbound.server_port = endpoint.includes('[') ? +endpoint.match(portRegex)[0] : +endpoint.split(':')[1];    
             singboxOutbound.peer_public_key = wgConfigs[i].account.config.peers[0].public_key;
             singboxOutbound.reserved = wgConfigs[i].account.config.client_id;
             singboxOutbound.private_key = wgConfigs[i].privateKey;
@@ -1404,7 +1426,6 @@ const buildWoWOutbounds = async (remoteDNS, localDNS, blockAds, bypassIran, bloc
 
     return {xray: xrayOutbounds, singbox: singboxOutbounds};
 }
-
 
 const fetchWgConfig = async () => {
     const wgResponse = await fetch('https://fscarmen.cloudflare.now.cc/wg');
@@ -1482,8 +1503,6 @@ const buildDNSObject = async (remoteDNS, localDNS, blockAds, bypassIran, blockPo
     return dnsObject;
 }
 
-
-
 const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN, isChain, isBalancer, isWorkerLess) => {
     let rules = [
         {
@@ -1492,10 +1511,10 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             type: "field"
         },
         {
-            ip: [localDNS],
-            outboundTag: "direct",
-            port: "53",
-            type: "field",
+          ip: [localDNS],
+          outboundTag: "direct",
+          port: "53",
+          type: "field",
         }
     ];
 
@@ -1509,7 +1528,7 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             outboundTag: "direct",
             type: "field",
         };
-
+        
         if (bypassIran && !isWorkerLess) {
             rules.push({
                 domain: ["geosite:category-ir", "domain:.ir"],
@@ -1534,23 +1553,16 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         blockPorn && rule.domain.push("geosite:category-porn");
         rules.push(rule);
     }
-
-    // قانون برای هدایت تمام ترافیک به پروکسی
-    rules.push({
-        outboundTag: "proxy",
-        type: "field",
-        network: "tcp,udp"
-    });
-
+   
     if (isBalancer) {
         rules.push({
             balancerTag: "all",
             type: "field",
             network: "tcp,udp",
         });
-    } else {
+    } else  {
         rules.push({
-            outboundTag: "proxy",
+            outboundTag: isChain ? "out" : isWorkerLess ? "fragment" : "proxy",
             type: "field",
             network: "tcp,udp"
         });
@@ -1558,7 +1570,6 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
 
     return rules;
 }
-
 
 const extractWgKeys = (textData) => {
     const lines = textData.trim().split("\n");
@@ -1632,23 +1643,33 @@ const getRandomPath = (length) => {
     }
     return result;
 }
+
 const resolveDNS = async (domain) => {
+    const dohURLv4 = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`;
+    const dohURLv6 = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=AAAA`;
+
     try {
-        const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${domain}`, {
-            headers: {
-                accept: 'application/dns-json',
-            },
-        });
-        const data = await response.json();
-        const ipv4 = data.Answer.filter(record => record.type === 1).map(record => record.data);
+        const [ipv4Response, ipv6Response] = await Promise.all([
+            fetch(dohURLv4, { headers: { accept: 'application/dns-json' } }),
+            fetch(dohURLv6, { headers: { accept: 'application/dns-json' } }),
+        ]);
+
+        const ipv4Addresses = await ipv4Response.json();
+        const ipv6Addresses = await ipv6Response.json();
+
+        const ipv4 = ipv4Addresses.Answer
+            ? ipv4Addresses.Answer.map((record) => record.data)
+            : [];
+        const ipv6 = ipv6Addresses.Answer
+            ? ipv6Addresses.Answer.map((record) => record.data)
+            : [];
+
         return { ipv4, ipv6 };
     } catch (error) {
-        console.error(`Failed to resolve DNS for domain: ${domain}`, error);
-        return { ipv4: [], ipv6: [] };
+        console.error('Error resolving DNS:', error);
+        throw new Error(`An error occurred while resolving DNS - ${error}`);
     }
-};
-
-
+}
 
 const generateJWTToken = (password, secretKey) => {
     const header = {
