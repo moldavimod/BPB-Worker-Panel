@@ -520,19 +520,6 @@ function processVlessHeader(vlessBuffer, userID) {
 				vlessBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
 			);
 			break;
-		case 3:
-			addressLength = 16;
-			const dataView = new DataView(
-				vlessBuffer.slice(addressValueIndex, addressValueIndex + addressLength)
-			);
-			// 2001:0db8:85a3:0000:0000:8a2e:0370:7334
-			const ipv6 = [];
-			for (let i = 0; i < 8; i++) {
-				ipv6.push(dataView.getUint16(i * 2).toString(16));
-			}
-			addressValue = ipv6.join(':');
-			// seems no need add [] for ipv6
-			break;
 		default:
 			return {
 				hasError: true,
@@ -794,7 +781,6 @@ const getNormalConfigs = async (env, hostName, client) => {
         hostName,
         'www.speedtest.net',
         ...resolved.ipv4,
-        ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...(cleanIPs ? cleanIPs.split(',') : [])
     ];
 
@@ -1032,7 +1018,6 @@ const getFragmentConfigs = async (env, hostName, client) => {
         hostName,
         "www.speedtest.net",
         ...resolved.ipv4,
-        ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...(cleanIPs ? cleanIPs.split(",") : [])
     ];
 
@@ -1209,7 +1194,6 @@ const getSingboxConfig = async (env, hostName) => {
         hostName,
         "www.speedtest.net",
         ...resolved.ipv4,
-        ...resolved.ipv6.map((ip) => `[${ip}]`),
         ...(cleanIPs ? cleanIPs.split(",") : [])
     ];
 
@@ -1657,7 +1641,6 @@ const resolveDNS = async (domain) => {
         });
         const data = await response.json();
         const ipv4 = data.Answer.filter(record => record.type === 1).map(record => record.data);
-        const ipv6 = data.Answer.filter(record => record.type === 28).map(record => record.data);
         return { ipv4, ipv6 };
     } catch (error) {
         console.error(`Failed to resolve DNS for domain: ${domain}`, error);
