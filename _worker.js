@@ -1498,6 +1498,7 @@ const buildDNSObject = async (remoteDNS, localDNS, blockAds, bypassIran, blockPo
     return dnsObject;
 }
 
+
 const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN, isChain, isBalancer, isWorkerLess) => {
     let rules = [
         {
@@ -1557,9 +1558,9 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         });
     } else  {
         rules.push({
-            outboundTag: isChain ? "out" : isWorkerLess ? "fragment" : "proxy",
             type: "field",
-            network: "tcp,udp"
+            network: "tcp,udp",
+            outboundTag: isChain ? "xui-out" : "proxy",
         });
     }
 
@@ -1639,22 +1640,22 @@ const getRandomPath = (length) => {
     return result;
 }
 const resolveDNS = async (domain) => {
-    const dohURLv4 = `https://cloudflare-dns.com/dns-query?name=${encodeURIComponent(domain)}&type=A`;
-
     try {
-        const ipv4Response = await fetch(dohURLv4, { headers: { accept: 'application/dns-json' } });
-        const ipv4Addresses = await ipv4Response.json();
-
-        const ipv4 = ipv4Addresses.Answer
-            ? ipv4Addresses.Answer.map((record) => record.data)
-            : [];
-
-        return { ipv4, ipv6: [] };
+        const response = await fetch(`https://cloudflare-dns.com/dns-query?name=${domain}`, {
+            headers: {
+                accept: 'application/dns-json',
+            },
+        });
+        const data = await response.json();
+        const ipv4 = data.Answer.filter(record => record.type === 1).map(record => record.data);
+        const ipv6 = data.Answer.filter(record => record.type === 28).map(record => record.data);
+        return { ipv4, ipv6 };
     } catch (error) {
-        console.error('Error resolving DNS:', error);
-        throw new Error(`An error occurred while resolving DNS - ${error}`);
+        console.error(`Failed to resolve DNS for domain: ${domain}`, error);
+        return { ipv4: [], ipv6: [] };
     }
-}
+};
+
 
 
 const generateJWTToken = (password, secretKey) => {
