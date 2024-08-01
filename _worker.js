@@ -1560,6 +1560,8 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             "googleapis.com",
             "googlesyndication.com",
 	    "ipnumberia.com",	
+	    "ip-api.com",
+	    "ip-api.com/json",
             "googlevideo.com"
         ],
         outboundTag: "proxy",
