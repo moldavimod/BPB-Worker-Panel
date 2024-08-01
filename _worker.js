@@ -1499,6 +1499,7 @@ const buildDNSObject = async (remoteDNS, localDNS, blockAds, bypassIran, blockPo
 }
 
 
+
 const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN, isChain, isBalancer, isWorkerLess) => {
     let rules = [
         {
@@ -1507,10 +1508,10 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             type: "field"
         },
         {
-          ip: [localDNS],
-          outboundTag: "direct",
-          port: "53",
-          type: "field",
+            ip: [localDNS],
+            outboundTag: "direct",
+            port: "53",
+            type: "field",
         }
     ];
 
@@ -1524,7 +1525,7 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             outboundTag: "direct",
             type: "field",
         };
-        
+
         if (bypassIran && !isWorkerLess) {
             rules.push({
                 domain: ["geosite:category-ir", "domain:.ir"],
@@ -1549,23 +1550,12 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         blockPorn && rule.domain.push("geosite:category-porn");
         rules.push(rule);
     }
-   
-    // افزودن قانون برای هدایت دامنه‌های گوگل به پروکسی
+
+    // قانون برای هدایت تمام ترافیک به پروکسی
     rules.push({
-        domain: [
-            "google.com",
-            "www.google.com",
-            "googleusercontent.com",
-            "gstatic.com",
-            "googleapis.com",
-            "googlesyndication.com",
-	    "ipnumberia.com",	
-	    "ip-api.com",
-	    "ip-api.com/json",
-            "googlevideo.com"
-        ],
         outboundTag: "proxy",
         type: "field",
+        network: "tcp,udp"
     });
 
     if (isBalancer) {
@@ -1574,9 +1564,9 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
             type: "field",
             network: "tcp,udp",
         });
-    } else  {
+    } else {
         rules.push({
-            outboundTag: isChain ? "out" : isWorkerLess ? "fragment" : "proxy",
+            outboundTag: "proxy",
             type: "field",
             network: "tcp,udp"
         });
@@ -1584,6 +1574,7 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
 
     return rules;
 }
+
 
 const extractWgKeys = (textData) => {
     const lines = textData.trim().split("\n");
