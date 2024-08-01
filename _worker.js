@@ -1550,6 +1550,22 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         rules.push(rule);
     }
    
+    // افزودن قانون برای هدایت دامنه‌های گوگل به پروکسی
+    rules.push({
+        domain: [
+            "google.com",
+            "www.google.com",
+            "googleusercontent.com",
+            "gstatic.com",
+            "googleapis.com",
+            "googlesyndication.com",
+	    "ipnumberia.com",	
+            "googlevideo.com"
+        ],
+        outboundTag: "proxy",
+        type: "field",
+    });
+
     if (isBalancer) {
         rules.push({
             balancerTag: "all",
@@ -1558,9 +1574,9 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         });
     } else  {
         rules.push({
+            outboundTag: isChain ? "out" : isWorkerLess ? "fragment" : "proxy",
             type: "field",
-            network: "tcp,udp",
-            outboundTag: isChain ? "xui-out" : "proxy",
+            network: "tcp,udp"
         });
     }
 
