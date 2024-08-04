@@ -1518,17 +1518,20 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         }
     ];
 
+    // Remove local DNS rule if localDNS is 'localhost' or if isWorkerLess is true
     if (localDNS === 'localhost' || isWorkerLess) {
         rules.pop();
     }
 
+    // Remove bypass Iran or LAN rules to ensure all traffic goes through the proxy
+    /*
     if (bypassIran || bypassLAN) {
         let rule = {
             ip: [],
             outboundTag: "direct",
             type: "field",
         };
-        
+
         if (bypassIran && !isWorkerLess) {
             rules.push({
                 domain: ["geosite:category-ir", "domain:.ir"],
@@ -1541,7 +1544,9 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         bypassLAN && rule.ip.push("geoip:private");
         rules.push(rule);
     }
+    */
 
+    // Add block rules for ads and porn if specified
     if (blockAds || blockPorn) {
         let rule = {
             domain: [],
@@ -1553,7 +1558,8 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
         blockPorn && rule.domain.push("geosite:category-porn");
         rules.push(rule);
     }
-   
+
+    // Ensure all traffic is routed through the proxy
     if (isBalancer) {
         rules.push({
             balancerTag: "all",
@@ -1570,6 +1576,7 @@ const buildRoutingRules = (localDNS, blockAds, bypassIran, blockPorn, bypassLAN,
 
     return rules;
 }
+
 
 const extractWgKeys = (textData) => {
     const lines = textData.trim().split("\n");
